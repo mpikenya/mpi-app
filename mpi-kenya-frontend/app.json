@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "Mpi Kenya",
+    "slug": "Frontend",
+    "owner": "peaceinitiative",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/mpi-app-icon.png",
+    "scheme": "mpikenya",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "extra": {
+      "//": "This links the project to EAS. Do not remove.",
+      "eas": {
+        "projectId": "84168f9b-1737-4b57-af08-20be6d3a8b3a"
+      }
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/mpi-app-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.peaceinitiative.mpikenya"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/mpi-app-icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 300,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-web-browser",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
