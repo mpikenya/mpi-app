@@ -1,0 +1,9 @@
+# Ignore all node_modules in any folder
+**/node_modules/
+
+# Ignore all environment secret files
+**/.env
+
+# Ignore Expo specific files
+.expo/
+dist/
