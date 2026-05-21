@@ -16,7 +16,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import * as SecureStore from "expo-secure-store";
 import axios from "axios";
-import { useFocusEffect } from "expo-router"; // Or from '@react-navigation/native'
+import { router, useFocusEffect } from "expo-router"; // Or from '@react-navigation/native'
 import { Feather } from "@expo/vector-icons";
 import config from "../../constants/config";
 import Toast from "react-native-toast-message";
@@ -169,6 +169,16 @@ const AdminPhotos = () => {
   // --- JSX Rendering ---
   return (
     <ScrollView style={styles.container}>
+
+      {/* ADD THIS BACK BUTTON */}
+    <TouchableOpacity
+      style={styles.backButton}
+      onPress={() => router.replace("/Admin/Dashboard")}
+      activeOpacity={0.7}
+    >
+      <Feather name="arrow-left" size={22} color="#007bff" />
+      <Text style={styles.backButtonText}>Back to Dashboard</Text>
+    </TouchableOpacity>
       {/* --- UPLOAD SECTION --- */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Upload New Images</Text>
@@ -308,6 +318,21 @@ const styles = StyleSheet.create({
   buttonTextWhite: { color: "#fff", fontSize: 16, fontWeight: "bold" },
   disabledButton: { opacity: 0.5 },
   emptyText: { textAlign: "center", color: "#6c757d", marginVertical: 20 },
+
+  // Add these two rules inside styles = StyleSheet.create({ ... })
+backButton: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: 12,
+  paddingHorizontal: 6,
+  marginBottom: 8,
+},
+backButtonText: {
+  color: "#007bff",
+  fontSize: 16,
+  fontWeight: "600",
+  marginLeft: 8,
+},
 
   // Styles for the gallery list
   galleryCard: {

@@ -1,32 +1,36 @@
 import { Tabs } from "expo-router";
 import { Feather, MaterialIcons, Ionicons } from "@expo/vector-icons";
-import { View, Text } from "react-native";
+import { Platform } from "react-native";
+// Import the safe area hook to detect the height of the Android 3-button navigation
+import { useSafeAreaInsets } from "react-native-safe-area-context"; 
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
-        headerShown: false, // This is fine, we will override it for the chat screen
-        tabBarActiveTintColor: "#0284C7", 
-        tabBarInactiveTintColor: "black",
+        headerShown: false,
+        tabBarActiveTintColor: "#0284C7",
+        tabBarInactiveTintColor: "#64748b", 
         tabBarStyle: {
           backgroundColor: "white",
-          height: 70,
-          paddingBottom: 30,
-          marginBottom: 40,
-          padding: 30,
-          position: "absolute",
-          borderTopWidth: 0,
-          overflow: "hidden",
-          elevation: 10,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -3 },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
+          // Calculate height dynamically by adding the system's bottom inset
+          // This keeps the bar tall enough so system buttons do not overlap tabs
+          height: Platform.OS === 'ios' ? 55 + insets.bottom : 60 + insets.bottom, 
+          borderTopWidth: 1,
+          borderTopColor: '#e2e8f0',
+          elevation: 0, 
+          shadowOpacity: 0, 
+          paddingTop: 10,
+          // Shift the interactive icons/labels above the 3 system buttons using safe insets
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 10, 
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: "600",
+          // Ensure labels are not cut off by the system navigation buttons
+          marginBottom: Platform.OS === 'android' ? 2 : 0,
         },
       }}
     >
@@ -34,8 +38,8 @@ export default function TabLayout() {
         name="Home"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="home" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Feather name="home" size={22} color={color} />
           ),
         }}
       />
@@ -43,8 +47,8 @@ export default function TabLayout() {
         name="News"
         options={{
           title: "News",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="article" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="article" size={24} color={color} />
           ),
         }}
       />
@@ -52,8 +56,8 @@ export default function TabLayout() {
         name="Gallery"
         options={{
           title: "Gallery",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="image" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Feather name="image" size={22} color={color} />
           ),
         }}
       />
@@ -61,8 +65,8 @@ export default function TabLayout() {
         name="Volunteer"
         options={{
           title: "Volunteer",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="people-outline" size={24} color={color} />
           ),
         }}
       />
@@ -70,8 +74,8 @@ export default function TabLayout() {
         name="Donate"
         options={{
           title: "Donate",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="dollar-sign" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Feather name="dollar-sign" size={22} color={color} />
           ),
         }}
       />
@@ -79,28 +83,19 @@ export default function TabLayout() {
         name="Contact"
         options={{
           title: "Contact",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="phone" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Feather name="phone" size={22} color={color} />
           ),
         }}
       />
 
-      {/***********************************************}
-      {/*         ADD THIS NEW SCREEN ENTRY           */}
-      {/***********************************************/}
       <Tabs.Screen
-        // This MUST match the file name: ChatbotScreen.tsx
         name="ChatbotScreen"
         options={{
-          // This is the magic line that hides the tab from the bottom bar
-          href: null,
-
-          // This overrides the global setting to show a header ONLY for this screen
+          href: null, // Hidden from tab bar
           headerShown: true,
-
-          // This sets the title that will appear in the new header
           title: "MPI Assistant",
-          tabBarStyle: { display: "none" },
+          tabBarStyle: { display: "none" }, // Hide tab bar when chatting
         }}
       />
     </Tabs>

@@ -6,16 +6,17 @@ import {
   Image,
   StyleSheet,
   ActivityIndicator,
-  SafeAreaView,
   RefreshControl,
   TouchableOpacity,
-  Dimensions, // Import Dimensions to get screen width
+  Dimensions,
 } from 'react-native';
 import axios from 'axios';
-import { useFocusEffect } from '@react-navigation/native'; // Or expo-router
-import config from '../../constants/config'; // Your config file with BASE_URL
+import { useFocusEffect } from 'expo-router';
+import config from '../../constants/config';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
+import NetInfo from '@react-native-community/netinfo'; // Import NetInfo
 
-// 1. Define the TypeScript type for a single gallery item.
 interface GalleryItem {
   _id: string;
   imageUrl: string;
@@ -23,21 +24,42 @@ interface GalleryItem {
   createdAt: string;
 }
 
+const { width } = Dimensions.get('window');
+
 const Gallery = () => {
-  // 2. Set up state variables.
+  const insets = useSafeAreaInsets();
+  
   const [images, setImages] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [isConnected, setIsConnected] = useState<boolean | null>(true);
 
-  // 3. Create the function to fetch data.
+  // 1. Monitor Internet Connection
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsConnected(state.isConnected);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const fetchImages = async () => {
+    // Check connection before fetching
+    const state = await NetInfo.fetch();
+    if (!state.isConnected) {
+      setIsConnected(false);
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
     try {
+      setIsConnected(true);
       const response = await axios.get(`${config.BASE_URL}/api/gallery`);
       setImages(response.data);
       setError(null);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
-      
       setError("Could not load the gallery. Please try again later.");
     } finally {
       setLoading(false);
@@ -45,7 +67,6 @@ const Gallery = () => {
     }
   };
 
-  // 4. Use useFocusEffect to refetch data on screen focus.
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
@@ -53,13 +74,30 @@ const Gallery = () => {
     }, [])
   );
 
-  // Function for "Pull to Refresh"
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchImages();
   }, []);
 
-  // 5. Render a loading indicator.
+  // --- UI Components for Different States ---
+
+  const renderNoInternet = () => (
+    <View style={styles.centerContainer}>
+      <View style={styles.iconCircle}>
+        <Feather name="wifi-off" size={40} color="#ef4444" />
+      </View>
+      <Text style={styles.errorTitle}>No Internet Connection</Text>
+      <Text style={styles.errorSubtitle}>
+        It looks like you&apos;re offline. Please check your settings and try again.
+      </Text>
+      <TouchableOpacity style={styles.retryButton} onPress={fetchImages}>
+        <Text style={styles.retryButtonText}>Retry Connection</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // --- Render Logic ---
+
   if (loading && !refreshing) {
     return (
       <View style={styles.centerContainer}>
@@ -69,33 +107,32 @@ const Gallery = () => {
     );
   }
 
-  // 6. Render an error message.
-  if (error) {
+  // Show "No Internet" UI if disconnected and no data exists
+  if (!isConnected && images.length === 0) {
+    return renderNoInternet();
+  }
+
+  if (error && images.length === 0) {
     return (
       <View style={styles.centerContainer}>
+        <Feather name="alert-circle" size={48} color="#94a3b8" />
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={fetchImages}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
+          <Text style={styles.retryButtonText}>Try Again</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  // 7. Render the main list of images.
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.mainContainer, { paddingTop: insets.top }]}>
       <FlatList
         data={images}
         keyExtractor={(item) => item._id}
-        // MODIFICATION: Add numColumns={2} to create a two-column grid
         numColumns={2}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={styles.image}
-              resizeMode="cover"
-            />
+            <Image source={{ uri: item.imageUrl }} style={styles.image} resizeMode="cover" />
             <View style={styles.captionContainer}>
               <Text style={styles.captionText} numberOfLines={2}>{item.caption}</Text>
             </View>
@@ -109,25 +146,29 @@ const Gallery = () => {
         }
         ListEmptyComponent={
           <View style={styles.centerContainer}>
+            <Feather name="image" size={48} color="#94a3b8" />
             <Text style={styles.emptyText}>The gallery is empty for now.</Text>
             <Text style={styles.emptySubtext}>Check back later for new photos!</Text>
           </View>
         }
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#0369A1"]}/>
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#0369A1"]} />
         }
         contentContainerStyle={styles.listContentContainer}
       />
-    </SafeAreaView>
+      
+      {/* Small floating "Offline" indicator if data is shown but user loses connection */}
+      {!isConnected && images.length > 0 && (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineBannerText}>You are currently offline</Text>
+        </View>
+      )}
+    </View>
   );
 };
 
-// Get the width of the device screen
-const { width } = Dimensions.get('window');
-
-// 8. Professional styling for the entire screen.
 const styles = StyleSheet.create({
-  safeArea: {
+  mainContainer: {
     flex: 1,
     backgroundColor: '#F3F4F6',
   },
@@ -135,85 +176,124 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 30,
   },
-  loadingText: {
-      marginTop: 10,
-      fontSize: 16,
-      color: '#4B5563',
-  },
-  errorText: {
-    fontSize: 18,
-    color: '#EF4444',
-    textAlign: 'center',
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#fee2e2',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 20,
   },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#4B5563',
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  errorSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#EF4444',
+    textAlign: 'center',
+    marginVertical: 16,
+  },
   retryButton: {
-      backgroundColor: '#0369A1',
-      paddingVertical: 10,
-      paddingHorizontal: 30,
-      borderRadius: 8,
+    backgroundColor: '#0369A1',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 12,
+    elevation: 2,
   },
   retryButtonText: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: '600',
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
   header: {
-    paddingVertical: 24,
-    paddingHorizontal: 16, // Adjust horizontal padding
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+    backgroundColor: '#fff',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    marginBottom: 10,
   },
   headerTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '800',
     color: '#111827',
     textAlign: 'center',
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#6B7280',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 6,
   },
-  // MODIFICATION: Styles for the two-column card
   card: {
     backgroundColor: 'white',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    borderRadius: 16,
     overflow: 'hidden',
-    // Calculate the width for each card to fit two columns with spacing
-    width: (width / 2) - 16, // (Screen width / 2 columns) - (spacing on both sides)
-    margin: 8, // Add margin to create space between cards
+    width: (width / 2) - 24,
+    margin: 12,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   },
-  // MODIFICATION: Reduced image height for a better grid look
   image: {
     width: '100%',
-    height: 150, // Reduced height
+    height: 160,
   },
   captionContainer: {
     padding: 12,
   },
   captionText: {
-    fontSize: 14, // Slightly smaller font for the smaller card
+    fontSize: 13,
     color: '#374151',
+    fontWeight: '500',
   },
   emptyText: {
     fontSize: 18,
+    fontWeight: 'bold',
     color: '#4B5563',
+    marginTop: 16,
   },
   emptySubtext: {
-      marginTop: 8,
-      color: '#6B7280',
+    marginTop: 8,
+    color: '#6B7280',
   },
   listContentContainer: {
-    paddingBottom: 110,
+    paddingBottom: 100,
   },
+  offlineBanner: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: '#374151',
+    padding: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  offlineBannerText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  }
 });
 
 export default Gallery;

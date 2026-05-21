@@ -26,6 +26,7 @@ const News = () => {
       if (posts.length === 0) setLoading(true); 
       const response = await axios.get(`${config.BASE_URL}/api/news`);
       setPosts(response.data);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       
     } finally {
@@ -37,6 +38,7 @@ const News = () => {
       useCallback(() => {
         setLoading(true); // Show loader when screen is focused
         fetchNews();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [])
     );
 
@@ -46,7 +48,7 @@ const News = () => {
       <Feather name="archive" size={48} color="#94a3b8" />
       <Text style={styles.emptyTitle}>No Posts Yet</Text>
       <Text style={styles.emptySubtitle}>
-        There are no news & events posted right now. We'll update this page as soon as there's something new to share.
+        There are no news & events posted right now. We&apos;ll update this page as soon as there&apos;s something new to share.
       </Text>
     </View>
   );
@@ -60,7 +62,7 @@ const News = () => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>News & Events</Text>
         <Text style={styles.headerSubtitle}>
-          Stay updated with what's happening at MPI Kenya
+          Stay updated with what&apos;s happening at MPI Kenya
         </Text>
       </View>
 

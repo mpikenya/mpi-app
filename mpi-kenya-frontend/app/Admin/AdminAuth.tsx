@@ -35,87 +35,94 @@ const AdminAuth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-const handleLogin = async () => {
-  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  setLoading(true);
+  const handleLogin = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setLoading(true);
 
-  try {
-    const res = await axios.post<LoginResponse>(
-      `${config.BASE_URL}/api/auth/admin`,
-      { email, password }
-    );
+    try {
+      const res = await axios.post<LoginResponse>(
+        `${config.BASE_URL}/api/auth/admin`,
+        { email, password }
+      );
 
-    if (res.data?.token) {
-      await SecureStore.setItemAsync("adminToken", res.data.token);
-      Toast.show({ type: "success", text1: "Admin Login Successful" });
-      router.replace("/Admin/Dashboard");
-    } else {
-      // This is good practice for unexpected API responses
-      throw new Error("Login response did not include a token.");
+      if (res.data?.token) {
+        await SecureStore.setItemAsync("adminToken", res.data.token);
+        Toast.show({ type: "success", text1: "Admin Login Successful" });
+        router.replace("/Admin/Dashboard");
+      } else {
+        throw new Error("Login response did not include a token.");
+      }
+    } catch (err) {
+      const error = err as AxiosError<ErrorResponse>;
+
+      if (!error.response) {
+        Toast.show({
+          type: "error",
+          text1: "Network Error",
+          text2: "Please check your internet connection and try again.",
+        });
+      } else {
+        Toast.show({
+          type: "error",
+          text1: "Login Failed",
+          text2:
+            error.response?.data?.message ||
+            "Invalid credentials or server error.",
+        });
+      }
+    } finally {
+      setLoading(false);
     }
+  };
 
-  } catch (err) {
-    const error = err as AxiosError<ErrorResponse>;
-
-    // --- THIS IS THE KEY CHANGE ---
-    // Check for network vs. server errors
-    if (!error.response) {
-      // Handle Network Error (No Internet)
-      Toast.show({
-        type: 'error',
-        text1: 'Network Error',
-        text2: 'Please check your internet connection and try again.',
-      });
-    } else {
-      // Handle Authentication or Server Error
-      Toast.show({
-        type: 'error',
-        text1: 'Login Failed',
-        text2: error.response?.data?.message || 'Invalid credentials or server error.',
-      });
-    }
-   
-  } finally {
-    setLoading(false);
-  }
-};
-
-    return (
+  return (
     <SafeAreaView className="flex-1 bg-white">
       <KeyboardAvoidingView
         className="flex-1"
+        // Adjusting behavior depending on OS layout engine
         behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
       >
         <ScrollView
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+          showsVerticalScrollIndicator={true} // Enabled to make it visually clear that scrolling is available
+          automaticallyAdjustKeyboardInsets={false}
           contentContainerStyle={{
             flexGrow: 1,
             paddingHorizontal: 24,
-            paddingTop: 60, // Use a fixed top padding
-            paddingBottom: 32,
+            paddingTop: 10, // Reduced from 20 to save top space
+            paddingBottom: 32, // Reduced from 48
           }}
         >
-          {/* Logo */}
-          <View className="items-center mb-6">
+          {/* Back Button */}
+          <TouchableOpacity
+            onPress={() => router.replace("/SignScreen")}
+            className="self-start p-2 -ml-2 mb-2 rounded-full" // Reduced mb-4 to mb-2
+            activeOpacity={0.7}
+          >
+            <Feather name="arrow-left" size={24} color="#0ea5e9" />
+          </TouchableOpacity>
+
+          {/* MPI Kenya Logo - Scaled down to prevent pushing inputs down */}
+          <View className="items-center mb-4"> 
             <Image
               source={require("../../assets/images/mpi-logo.jpeg")}
-              className="w-48 h-36"
+              className="w-36 h-20" // Reduced from w-48 h-36
               resizeMode="contain"
             />
           </View>
 
-          {/* Icon */}
-          <View className="items-center mb-4">
+          {/* Admin Icon - Scaled down */}
+          <View className="items-center mb-2">
             <Image
               source={require("../../assets/images/user-gear.png")}
-              className="w-32 h-24"
+              className="w-20 h-16" // Reduced from w-32 h-24
               resizeMode="contain"
             />
           </View>
 
-          {/* Title */}
-          <Text className="text-3xl font-bold text-center text-slate-800 mb-6">
+          {/* Title - Compact size */}
+          <Text className="text-2xl font-bold text-center text-slate-800 mb-4">
             Admin Login
           </Text>
 
@@ -144,8 +151,15 @@ const handleLogin = async () => {
               className="flex-1 ml-3 text-base text-slate-800"
               placeholderTextColor="#94a3b8"
             />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="ml-2">
-              <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="#0ea5e9" />
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              className="ml-2"
+            >
+              <Feather
+                name={showPassword ? "eye" : "eye-off"}
+                size={20}
+                color="#0ea5e9"
+              />
             </TouchableOpacity>
           </View>
 
@@ -160,12 +174,11 @@ const handleLogin = async () => {
             {loading ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text className="text-white font-semibold text-base">Sign In</Text>
+              <Text className="text-white font-semibold text-base">
+                Sign In
+              </Text>
             )}
           </TouchableOpacity>
-
-          {/* Flexible Spacer - This is the key to pushing the content up */}
-          <View className="flex-1" />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

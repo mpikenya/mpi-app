@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import axios, { AxiosError } from 'axios';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import config from '../../constants/config';
 import Toast from 'react-native-toast-message';
@@ -61,6 +61,7 @@ const NormalUsersView = () => {
               });
               setUsers((prevUsers) => prevUsers.filter((user) => user._id !== userId));
               Toast.show({ type: 'success', text1: 'User Deleted' });
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             } catch (err) {
               Toast.show({ type: 'error', text1: 'Deletion Failed', text2: 'Could not delete the user.' });
             }
@@ -80,6 +81,14 @@ const NormalUsersView = () => {
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity
+      style={styles.backButton}
+      onPress={() => router.replace("/Admin/Dashboard")}
+      activeOpacity={0.7}
+    >
+      <Feather name="arrow-left" size={22} color="#0369A1" />
+      <Text style={styles.backButtonText}>Back to Dashboard</Text>
+    </TouchableOpacity>
       <Text style={styles.header}>User Accounts</Text>
       <FlatList
         data={users}
@@ -136,14 +145,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6', 
     paddingHorizontal: 16 
   },
-  header: { 
-    fontSize: 28, 
-    fontWeight: 'bold', 
-    color: '#111827', 
-    paddingTop: 16,
-    paddingBottom: 16,
-    marginTop:20,
-  },
+  
+  // 1. Add these styles to StyleSheet.create({ ... })
+backButton: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: 12,
+  paddingHorizontal: 6,
+  marginTop: 16,
+},
+backButtonText: {
+  color: "#0369A1",
+  fontSize: 16,
+  fontWeight: "600",
+  marginLeft: 8,
+},
+
+// 2. Adjust your header style object to match this (removing marginTop: 20):
+header: { 
+  fontSize: 28, 
+  fontWeight: 'bold', 
+  color: '#111827', 
+  paddingTop: 8,
+  paddingBottom: 16,
+},
   centerContainer: { 
     flex: 1, 
     justifyContent: 'center', 

@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import axios, { AxiosError } from 'axios';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import config from '../../constants/config';
 // MODIFICATION: Import an icon library
@@ -50,6 +50,15 @@ const AdminPersonnel = () => {
 
   return (
     <View style={styles.container}>
+      {/* ADD THIS BACK BUTTON */}
+    <TouchableOpacity
+      style={styles.backButton}
+      onPress={() => router.replace("/Admin/Dashboard")}
+      activeOpacity={0.7}
+    >
+      <Feather name="arrow-left" size={22} color="#0369A1" />
+      <Text style={styles.backButtonText}>Back to Dashboard</Text>
+    </TouchableOpacity>
       <Text style={styles.header}>Admin Personnel</Text>
       <FlatList
         data={admins}
@@ -90,14 +99,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6', // Lighter gray background
     paddingHorizontal: 16,
   },
-  header: { 
-    fontSize: 28, 
-    fontWeight: 'bold', 
-    color: '#111827', 
-    paddingTop: 16,
-    paddingBottom: 16,
-    marginTop:16,
-  },
+  
   centerContainer: { 
     flex: 1, 
     justifyContent: 'center', 
@@ -126,6 +128,29 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  // 1. Add these styles to StyleSheet.create({ ... })
+backButton: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: 12,
+  paddingHorizontal: 6,
+  marginTop: 16,
+},
+backButtonText: {
+  color: "#0369A1",
+  fontSize: 16,
+  fontWeight: "600",
+  marginLeft: 8,
+},
+
+// 2. Adjust your header style object to match this (removing marginTop: 16):
+header: { 
+  fontSize: 28, 
+  fontWeight: 'bold', 
+  color: '#111827', 
+  paddingTop: 8,
+  paddingBottom: 16,
+},
   // Style for each row (icon + text)
   detailRow: {
     flexDirection: 'row',

@@ -17,7 +17,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as SecureStore from "expo-secure-store";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import axios from "axios";
-import { useFocusEffect, Stack } from "expo-router";
+import { useFocusEffect, Stack, router } from "expo-router";
 import config from "../../constants/config";
 import { Feather } from "@expo/vector-icons";
 
@@ -163,6 +163,15 @@ const AdminNews = () => {
       }
     >
       <Stack.Screen options={{ title: "News & Events Dashboard" }} />
+      {/* ADD THIS BACK BUTTON */}
+  <TouchableOpacity
+    style={styles.backButton}
+    onPress={() => router.replace("/Admin/Dashboard")}
+    activeOpacity={0.7}
+  >
+    <Feather name="arrow-left" size={22} color="#007bff" />
+    <Text style={styles.backButtonText}>Back to Dashboard</Text>
+  </TouchableOpacity>
 
       {/* --- CREATE POST SECTION --- */}
       <View style={styles.section}>
@@ -306,6 +315,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 16,
   },
+  // Add these two rules inside styles = StyleSheet.create({ ... })
+backButton: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: 12,
+  paddingHorizontal: 6,
+  marginBottom: 8,
+},
+backButtonText: {
+  color: "#007bff",
+  fontSize: 16,
+  fontWeight: "600",
+  marginLeft: 8,
+},
   button: {
     backgroundColor: "#ced4da",
     padding: 15,

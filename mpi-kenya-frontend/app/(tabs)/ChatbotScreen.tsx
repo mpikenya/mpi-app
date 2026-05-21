@@ -1,6 +1,4 @@
-// app/(tabs)/ChatbotScreen.tsx (Complete Code)
-
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,105 +10,161 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { Stack } from 'expo-router';
-import config from '../../constants/config';
-import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  StatusBar,
+} from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { Stack,  router } from "expo-router";
+import axios from "axios"; // Use axios for consistency
+import config from "../../constants/config";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import NetInfo from "@react-native-community/netinfo";
 
-// --- Type safety ---
-interface Message { id: string; text: string; sender: 'user' | 'bot'; }
+interface Message {
+  id: string;
+  text: string;
+  sender: "user" | "bot";
+}
 
-// ✅ --- FULL CHATMESSAGE COMPONENT --- ✅
+// eslint-disable-next-line react/display-name
 const ChatMessage = React.memo(({ item }: { item: Message }) => (
-  <View style={[styles.chatBubble, item.sender === 'bot' ? styles.chatBubbleBot : styles.chatBubbleUser]}>
-    <Text style={item.sender === 'bot' ? styles.chatBubbleText : styles.chatBubbleTextUser}>
+  <View
+    style={[
+      styles.chatBubble,
+      item.sender === "bot" ? styles.chatBubbleBot : styles.chatBubbleUser,
+    ]}
+  >
+    <Text
+      style={
+        item.sender === "bot"
+          ? styles.chatBubbleText
+          : styles.chatBubbleTextUser
+      }
+    >
       {item.text}
     </Text>
   </View>
 ));
 
 const ChatbotScreen = () => {
+  const insets = useSafeAreaInsets();
   const chatListRef = useRef<FlatList<Message> | null>(null);
 
-  // ✅ --- FULL INITIAL MESSAGES STATE --- ✅
   const [messages, setMessages] = useState<Message[]>([
-    { id: '1', text: 'Hi 👋 I am MathareForPeace-GPT. How can I help you learn about the Mathare Peace Initiative today?', sender: 'bot' }
+    {
+      id: "1",
+      text: "Hi 👋 I am MathareForPeace-GPT. How can I help you learn about the Mathare Peace Initiative today?",
+      sender: "bot",
+    },
   ]);
-  
-  const [userInput, setUserInput] = useState('');
+
+  const [userInput, setUserInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isConnected, setIsConnected] = useState(true);
 
-  // ✅ --- FULL HANDLESEND FUNCTION --- ✅
-// In ChatbotScreen.tsx
+  // Monitor connection
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsConnected(!!state.isConnected);
+    });
+    return () => unsubscribe();
+  }, []);
 
-// In ChatbotScreen.tsx
+  const handleSend = async () => {
+    if (userInput.trim() === "" || isLoading) return;
 
-const handleSend = async () => {
-    if (userInput.trim() === '' || isLoading) return;
+    if (!isConnected) {
+      const offlineMsg: Message = {
+        id: Date.now().toString(),
+        text: "You are currently offline. Please check your internet connection.",
+        sender: "bot",
+      };
+      setMessages((prev) => [...prev, offlineMsg]);
+      return;
+    }
 
-    const userMessage: Message = { id: Date.now().toString(), text: userInput.trim(), sender: 'user' };
-    setMessages(prev => [...prev, userMessage]);
-    setUserInput('');
+    const userText = userInput.trim();
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: userText,
+      sender: "user",
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setUserInput("");
     setIsLoading(true);
 
-    setTimeout(() => chatListRef.current?.scrollToEnd({ animated: true }), 100);
-
     try {
-      const apiUrl = `${config.BASE_URL}/api/chatbot`;
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessage.text }),
+      const response = await axios.post(`${config.BASE_URL}/api/chatbot`, {
+        message: userText,
       });
 
-      if (!response.ok) throw new Error('Network response was not ok');
-      
-      // We expect a simple JSON object now
-      const data = await response.json();
-      
-      if (data.reply) {
-        const botMessage: Message = { id: (Date.now() + 1).toString(), text: data.reply, sender: 'bot' };
-        setMessages(prev => [...prev, botMessage]);
-      } else {
-        // Handle cases where the reply is empty
-        const errorMessage: Message = { id: (Date.now() + 1).toString(), text: "I received a response, but it was empty.", sender: 'bot' };
-        setMessages(prev => [...prev, errorMessage]);
+      if (response.data && response.data.reply) {
+        const botMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: response.data.reply,
+          sender: "bot",
+        };
+        setMessages((prev) => [...prev, botMessage]);
       }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      const errorMessage: Message = { id: (Date.now() + 1).toString(), text: "Sorry, I'm having trouble connecting. Please try again later.", sender: 'bot' };
-      setMessages(prev => [...prev, errorMessage]);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "Sorry, I'm having trouble connecting. Please try again later.",
+        sender: "bot",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
-      setTimeout(() => chatListRef.current?.scrollToEnd({ animated: true }), 100);
     }
   };
 
-  const renderChatItem = useCallback(({ item }: { item: Message }) => <ChatMessage item={item} />, []);
+  const renderChatItem = useCallback(
+    ({ item }: { item: Message }) => <ChatMessage item={item} />,
+    [],
+  );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <Stack.Screen options={{ headerShown: false }} /> 
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <Stack.Screen options={{ headerShown: false }} />
 
       <LinearGradient
-        colors={['#0ea5e9', '#0284c7']}
-        style={styles.header}
+        colors={["#0ea5e9", "#0284c7"]}
+        style={[styles.header, { paddingTop: insets.top + 10 }]}
       >
+        {/* ADD THIS BACK BUTTON */}
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.replace("/(tabs)/Home")}
+          activeOpacity={0.7}
+        >
+          <Feather name="arrow-left" size={24} color="white" />
+        </TouchableOpacity>
         <Image
           source={require("../../assets/images/ai-robot.jpg")}
           style={styles.headerAvatar}
         />
         <View>
           <Text style={styles.headerTitle}>MathareForPeace-GPT</Text>
-          <Text style={styles.headerStatus}>We are online!</Text>
+          <View style={styles.statusRow}>
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: isConnected ? "#4ade80" : "#f87171" },
+              ]}
+            />
+            <Text style={styles.headerStatus}>
+              {isConnected ? "Online" : "Offline"}
+            </Text>
+          </View>
         </View>
       </LinearGradient>
 
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.keyboardAvoidingContainer}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <FlatList
           ref={chatListRef}
@@ -119,135 +173,202 @@ const handleSend = async () => {
           renderItem={renderChatItem}
           style={styles.messageList}
           contentContainerStyle={styles.messageListContent}
-          ListFooterComponent={isLoading ? <ActivityIndicator style={{ margin: 10 }} color="#0ea5e9" /> : null}
+          onContentSizeChange={() =>
+            chatListRef.current?.scrollToEnd({ animated: true })
+          }
+          ListFooterComponent={
+            isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#0ea5e9" />
+                <Text style={styles.loadingText}>GPT is typing...</Text>
+              </View>
+            ) : null
+          }
         />
 
-        <View style={styles.inputContainer}>
+        <View
+          style={[
+            styles.inputContainer,
+            { paddingBottom: Platform.OS === "ios" ? insets.bottom : 10 },
+          ]}
+        >
           <TextInput
             style={styles.textInput}
-            placeholder="Enter your message..."
+            placeholder="Type a message..."
             placeholderTextColor="#94a3b8"
             value={userInput}
             onChangeText={setUserInput}
             editable={!isLoading}
-            onSubmitEditing={handleSend}
+            multiline
+            maxLength={500}
           />
-          <TouchableOpacity style={styles.sendButton} onPress={handleSend} disabled={isLoading}>
-            <Feather name="send" size={22} color="#ffffff" />
+          <TouchableOpacity
+            style={[
+              styles.sendButton,
+              (!userInput.trim() || isLoading) && styles.sendButtonDisabled,
+            ]}
+            onPress={handleSend}
+            disabled={isLoading || !userInput.trim()}
+          >
+            <Feather name="send" size={20} color="#ffffff" />
           </TouchableOpacity>
         </View>
         <Text style={styles.poweredBy}>
-          POWERED BY <Text style={{ fontWeight: "bold", color: "#475569" }}>GEMINI</Text>
+          POWERED BY{" "}
+          <Text style={{ fontWeight: "bold", color: "#475569" }}>
+            GEMINI AI
+          </Text>
         </Text>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0284c7', 
+    backgroundColor: "#0284c7",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 40,
-    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingBottom: 30,
+    paddingHorizontal: 20,
   },
   headerAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     marginRight: 12,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    borderColor: "rgba(255, 255, 255, 0.4)",
   },
   headerTitle: {
-    color: 'white',
+    color: "white",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+
+  backButton: {
+    marginRight: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerStatus: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: 12,
   },
   keyboardAvoidingContainer: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: "#f8fafc",
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   messageList: {
     flex: 1,
   },
   messageListContent: {
     padding: 16,
+    paddingBottom: 20,
   },
   chatBubble: {
     maxWidth: "85%",
     padding: 14,
     borderRadius: 20,
-    marginBottom: 10,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
     elevation: 1,
   },
   chatBubbleBot: {
     backgroundColor: "white",
     alignSelf: "flex-start",
-    borderTopLeftRadius: 5,
-    borderColor: '#e2e8f0', // Adding a subtle border for depth
-    borderWidth: 1,
+    borderBottomLeftRadius: 2,
   },
   chatBubbleUser: {
     backgroundColor: "#0ea5e9",
     alignSelf: "flex-end",
-    borderTopRightRadius: 5,
+    borderBottomRightRadius: 2,
   },
   chatBubbleText: {
-    fontSize: 16,
+    fontSize: 15,
     color: "#334155",
-    lineHeight: 24,
+    lineHeight: 22,
   },
   chatBubbleTextUser: {
-    fontSize: 16,
+    fontSize: 15,
     color: "white",
-    lineHeight: 24,
+    lineHeight: 22,
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingLeft: 4,
+    marginBottom: 10,
+  },
+  loadingText: {
+    marginLeft: 8,
+    fontSize: 12,
+    color: "#64748b",
+    fontStyle: "italic",
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    backgroundColor: "white",
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-    backgroundColor: 'white',
+    borderTopColor: "#f1f5f9",
   },
   textInput: {
     flex: 1,
-    height: 48,
-    backgroundColor: '#f8fafc',
-    borderRadius: 24,
+    minHeight: 45,
+    maxHeight: 100,
+    backgroundColor: "#f1f5f9",
+    borderRadius: 22,
     paddingHorizontal: 18,
-    fontSize: 16,
-    color: '#0f172a',
+    paddingTop: 12,
+    paddingBottom: 12,
+    fontSize: 15,
+    color: "#1e293b",
   },
   sendButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#0ea5e9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
+    width: 45,
+    height: 45,
+    borderRadius: 23,
+    backgroundColor: "#0ea5e9",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 10,
+    marginBottom: 2,
+  },
+  sendButtonDisabled: {
+    backgroundColor: "#94a3b8",
   },
   poweredBy: {
-    fontSize: 11,
-    color: '#64748b',
-    textAlign: 'center',
-    paddingBottom: 5,
-    backgroundColor: 'white',
+    fontSize: 10,
+    color: "#94a3b8",
+    textAlign: "center",
+    paddingVertical: 6,
+    backgroundColor: "white",
+    letterSpacing: 1,
   },
 });
 

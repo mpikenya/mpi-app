@@ -3,7 +3,7 @@ import React, {
   useEffect,
   useRef,
   useCallback,
-  useMemo,
+  
 } from "react";
 import {
   ScrollView,
@@ -19,7 +19,9 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
+// eslint-disable-next-line import/no-duplicates
 import { Ionicons } from "@expo/vector-icons";
+// eslint-disable-next-line import/no-duplicates
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
@@ -49,6 +51,7 @@ const getGreeting = (): string => {
 };
 
 // --- Memoized Review Card Component ---
+// eslint-disable-next-line react/display-name
 const ReviewCard = React.memo(({ item }: { item: Review }) => (
   <View style={styles.reviewCard}>
     <View className="flex-row items-center mb-3 flex-wrap">
@@ -69,6 +72,7 @@ const ReviewCard = React.memo(({ item }: { item: Review }) => (
 ));
 
 // --- Memoized Partner Card Component ---
+// eslint-disable-next-line react/display-name
 const PartnerCard = React.memo(({ item }: { item: Partner }) => (
   <View style={styles.partnerCard}>
     <Image
@@ -199,13 +203,13 @@ const HomeScreen = () => {
         isViewable: boolean;
         section?: any;
       }>;
-      changed: Array<{
+      changed: {
         item: Partner;
         key: string;
         index: number | null;
         isViewable: boolean;
         section?: any;
-      }>;
+      }[];
     }) => {
       if (
         viewableItems.length > 0 &&
@@ -569,7 +573,7 @@ const HomeScreen = () => {
           <View style={styles.launcherTextContainer}>
             <Text style={styles.launcherTitle}>Chat with MPI Assistant</Text>
             <Text style={styles.launcherSubtitle}>
-              Ask me anything about MPI's mission, services, and how you can
+              Ask me anything about MPI&apos;s mission, services, and how you can
               help.
             </Text>
           </View>

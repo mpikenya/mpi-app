@@ -8,37 +8,31 @@ import {
   Image,
   ActivityIndicator,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
+// Note: Removed SafeAreaView from 'react-native'
 import { useLocalSearchParams, Stack } from 'expo-router';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import config from '../../constants/config';
-import Toast from 'react-native-toast-message';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Import this
 import { Feather } from '@expo/vector-icons';
 
-// Interface for the fetched news post data
 interface NewsPost {
   _id: string;
   title: string;
-  content: string; // This content is now treated as plain text
+  content: string;
   imageUrl?: string;
   date: string;
 }
 
 const NewsDetailsPage = () => {
-  // Get the post ID from the URL parameters
   const { id } = useLocalSearchParams<{ id: string }>();
-  // Get safe area insets for proper spacing
-  const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets(); // Get the safe area values
 
-  // State management for the component
   const [post, setPost] = useState<NewsPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch post details when the component mounts or the ID changes
   useEffect(() => {
     if (id) {
       const fetchPostDetails = async () => {
@@ -47,15 +41,9 @@ const NewsDetailsPage = () => {
           setError(null);
           const response = await axios.get(`${config.BASE_URL}/api/news/${id}`);
           setPost(response.data);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (err) {
-          const axiosError = err as AxiosError;
-          if (!axiosError.response) {
-            Toast.show({ type: 'error', text1: 'Network Error', text2: 'Please check your internet connection.' });
-            setError('Could not connect to the server.');
-          } else {
-            Toast.show({ type: 'error', text1: 'Error Loading Post', text2: 'The requested post could not be found.' });
-            setError('This post could not be loaded.');
-          }
+          setError('This post could not be loaded.');
         } finally {
           setLoading(false);
         }
@@ -64,7 +52,6 @@ const NewsDetailsPage = () => {
     }
   }, [id]);
 
-  // --- Render loading state ---
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -73,7 +60,6 @@ const NewsDetailsPage = () => {
     );
   }
 
-  // --- Render error state ---
   if (error || !post) {
     return (
       <View style={styles.centerContainer}>
@@ -82,16 +68,18 @@ const NewsDetailsPage = () => {
     );
   }
 
-  // --- Render the main content ---
+  const hasImage = !!post.imageUrl;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" />
+    // We use a regular View and apply the bottom inset to handle home indicators
+    <View style={[styles.mainWrapper, { paddingBottom: insets.bottom }]}>
+      <StatusBar barStyle={hasImage ? "light-content" : "dark-content"} />
       
       <Stack.Screen
         options={{
           headerTransparent: true,
           headerTitle: '',
-          headerTintColor: '#FFFFFF',
+          headerTintColor: hasImage ? '#FFFFFF' : '#0ea5e9',
         }}
       />
       
@@ -99,20 +87,23 @@ const NewsDetailsPage = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContainer}
       >
-        {/* Hero Image */}
-        {post.imageUrl && (
+        {hasImage ? (
           <Image 
             source={{ uri: post.imageUrl }} 
-            style={[styles.heroImage, { marginTop: insets.top }]} 
+            style={styles.heroImage} 
             resizeMode="cover"
           />
+        ) : (
+          // Add a spacer if there is no image to prevent text going under the status bar
+          <View style={{ height: insets.top + 60 }} />
         )}
 
-        {/* Content Section */}
-        <View style={styles.contentWrapper}>
+        <View style={[
+          styles.contentWrapper, 
+          hasImage && { marginTop: -30, borderTopLeftRadius: 30, borderTopRightRadius: 30 }
+        ]}>
           <Text style={styles.title}>Event: {post.title}</Text>
 
-          {/* Metadata Box */}
           <View style={styles.metaContainer}>
             <View style={styles.metaItem}>
               <Feather name="calendar" style={styles.metaIcon} />
@@ -130,22 +121,20 @@ const NewsDetailsPage = () => {
             </View>
           </View>
 
-          {/* Divider */}
           <View style={styles.divider} />
           <Text style={styles.contentHeader}>Full Story</Text>
 
-          {/* Plain Text Content Display */}
           <Text style={styles.content}>
             {post.content}
           </Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  mainWrapper: {
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
@@ -171,9 +160,6 @@ const styles = StyleSheet.create({
   contentWrapper: {
     padding: 20,
     backgroundColor: '#FFFFFF',
-    marginTop: -30,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
   },
   title: {
     fontSize: 26,
