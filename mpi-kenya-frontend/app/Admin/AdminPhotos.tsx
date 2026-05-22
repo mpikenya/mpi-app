@@ -11,12 +11,11 @@ import {
   Image,
   Alert,
   StyleSheet,
-  FlatList, // Using FlatList for the existing gallery for better performance
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as SecureStore from "expo-secure-store";
 import axios from "axios";
-import { router, useFocusEffect } from "expo-router"; // Or from '@react-navigation/native'
+import { router, useFocusEffect } from "expo-router"; 
 import { Feather } from "@expo/vector-icons";
 import config from "../../constants/config";
 import Toast from "react-native-toast-message";
@@ -24,6 +23,7 @@ import Toast from "react-native-toast-message";
 // Interface for images coming from the database
 interface GalleryItem {
   _id: string;
+  id?: string; // Fallback in case backend uses 'id'
   imageUrl: string;
   caption: string;
 }
@@ -45,25 +45,19 @@ const AdminPhotos = () => {
       const response = await axios.get(`${config.BASE_URL}/api/gallery`);
       setGalleryImages(response.data);
     } catch (error) {
-      
       Alert.alert("Error", "Could not load existing gallery images.");
     } finally {
       setLoadingGallery(false);
     }
   }, []);
 
-  // useFocusEffect will refetch images every time the admin visits this screen
-  // CORRECT: This passes a non-async function that CONTAINS an async call
   useFocusEffect(
     useCallback(() => {
-      // This is the function that runs when the screen is focused
       fetchGalleryImages();
-
-      // The return value here is 'undefined', which is valid
-    }, [fetchGalleryImages]) // Rerun the effect if fetchGalleryImages changes (due to useCallback)
+    }, [fetchGalleryImages])
   );
 
-  // --- Upload Logic (Mostly unchanged) ---
+  // --- Upload Logic ---
   const pickImages = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -96,7 +90,13 @@ const AdminPhotos = () => {
 
       imagesToUpload.forEach((uri) => {
         const fileName = uri.split("/").pop() || "image.jpg";
-        const fileType = uri.split(".").pop() || "jpg";
+        let fileType = (uri.split(".").pop() || "jpg").toLowerCase();
+        
+        // Normalize jpg extension to jpeg standard MIME format
+        if (fileType === "jpg") {
+          fileType = "jpeg";
+        }
+
         formData.append("images", {
           uri,
           type: `image/${fileType}`,
@@ -106,7 +106,8 @@ const AdminPhotos = () => {
 
       formData.append("caption", caption);
 
-      await axios.post(`${config.BASE_URL}/api/admin/gallery`, formData, {
+      // FIX: Changed endpoint to match /api/gallery/admin
+      await axios.post(`${config.BASE_URL}/api/gallery/admin`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -114,12 +115,12 @@ const AdminPhotos = () => {
       });
 
       Alert.alert("Success", `${imagesToUpload.length} image(s) uploaded!`);
-      // Clear inputs and refetch the gallery to show the new images
+      // Clear inputs and refetch the gallery
       setCaption("");
       setImagesToUpload([]);
       fetchGalleryImages();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-     
       Toast.show({
         type: "error",
         text1: "Upload failed",
@@ -130,7 +131,7 @@ const AdminPhotos = () => {
     }
   };
 
-  // --- New DELETE Logic ---
+  // --- DELETE Logic ---
   const handleDelete = async (imageId: string) => {
     Alert.alert(
       "Confirm Deletion",
@@ -143,15 +144,15 @@ const AdminPhotos = () => {
           onPress: async () => {
             try {
               const token = await SecureStore.getItemAsync("adminToken");
+              // FIX: Changed endpoint to match /api/gallery/admin/:id
               await axios.delete(
-                `${config.BASE_URL}/api/admin/gallery/${imageId}`,
+                `${config.BASE_URL}/api/gallery/admin/${imageId}`,
                 {
                   headers: { Authorization: `Bearer ${token}` },
                 }
               );
 
               Alert.alert("Success", "Image has been deleted.");
-              // Refetch the gallery to reflect the deletion
               fetchGalleryImages();
             } catch (error) {
               Toast.show({
@@ -166,19 +167,18 @@ const AdminPhotos = () => {
     );
   };
 
-  // --- JSX Rendering ---
   return (
     <ScrollView style={styles.container}>
+      {/* Back Button */}
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.replace("/Admin/Dashboard")}
+        activeOpacity={0.7}
+      >
+        <Feather name="arrow-left" size={22} color="#007bff" />
+        <Text style={styles.backButtonText}>Back to Dashboard</Text>
+      </TouchableOpacity>
 
-      {/* ADD THIS BACK BUTTON */}
-    <TouchableOpacity
-      style={styles.backButton}
-      onPress={() => router.replace("/Admin/Dashboard")}
-      activeOpacity={0.7}
-    >
-      <Feather name="arrow-left" size={22} color="#007bff" />
-      <Text style={styles.backButtonText}>Back to Dashboard</Text>
-    </TouchableOpacity>
       {/* --- UPLOAD SECTION --- */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Upload New Images</Text>
@@ -191,8 +191,8 @@ const AdminPhotos = () => {
         />
 
         <View style={styles.previewContainer}>
-          {imagesToUpload.map((uri) => (
-            <View key={uri} style={styles.imageWrapper}>
+          {imagesToUpload.map((uri, idx) => (
+            <View key={uri || `preview-${idx}`} style={styles.imageWrapper}>
               <Image source={{ uri }} style={styles.previewImage} />
               <TouchableOpacity
                 style={styles.removeIcon}
@@ -243,24 +243,27 @@ const AdminPhotos = () => {
         ) : galleryImages.length === 0 ? (
           <Text style={styles.emptyText}>The gallery is currently empty.</Text>
         ) : (
-          galleryImages.map((item) => (
-            <View key={item._id} style={styles.galleryCard}>
-              <Image
-                source={{ uri: item.imageUrl }}
-                style={styles.galleryImage}
-              />
-              <View style={styles.galleryInfo}>
-                <Text style={styles.galleryCaption}>{item.caption}</Text>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => handleDelete(item._id)}
-                >
-                  <Feather name="trash-2" size={20} color="#EF4444" />
-                  <Text style={styles.deleteButtonText}>Delete</Text>
-                </TouchableOpacity>
+          galleryImages.map((item, index) => {
+            const itemKey = item._id || item.id || `gallery-${index}`;
+            return (
+              <View key={itemKey} style={styles.galleryCard}>
+                <Image
+                  source={{ uri: item.imageUrl }}
+                  style={styles.galleryImage}
+                />
+                <View style={styles.galleryInfo}>
+                  <Text style={styles.galleryCaption}>{item.caption}</Text>
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleDelete(item._id || item.id || "")}
+                  >
+                    <Feather name="trash-2" size={20} color="#EF4444" />
+                    <Text style={styles.deleteButtonText}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          ))
+            );
+          })
         )}
       </View>
     </ScrollView>
@@ -319,22 +322,20 @@ const styles = StyleSheet.create({
   disabledButton: { opacity: 0.5 },
   emptyText: { textAlign: "center", color: "#6c757d", marginVertical: 20 },
 
-  // Add these two rules inside styles = StyleSheet.create({ ... })
-backButton: {
-  flexDirection: "row",
-  alignItems: "center",
-  paddingVertical: 12,
-  paddingHorizontal: 6,
-  marginBottom: 8,
-},
-backButtonText: {
-  color: "#007bff",
-  fontSize: 16,
-  fontWeight: "600",
-  marginLeft: 8,
-},
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    marginBottom: 8,
+  },
+  backButtonText: {
+    color: "#007bff",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
 
-  // Styles for the gallery list
   galleryCard: {
     flexDirection: "row",
     backgroundColor: "#f8f9fa",

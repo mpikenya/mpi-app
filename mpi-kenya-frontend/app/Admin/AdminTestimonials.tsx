@@ -29,6 +29,7 @@ interface ErrorResponse {
 // Interface for Testimonial Items from the database
 interface TestimonialItem {
   _id: string;
+  id?: string; // Fallback in case backend uses 'id'
   name: string;
   text: string;
   imageUrl: string; // Assuming your backend returns imageUrl
@@ -284,13 +285,13 @@ const handleDeleteTestimonial = (testimonialId: string) => {
                 )}
               </TouchableOpacity>
               <Text style={styles.imagePickerHint}>
-                Tap to upload reviewer's photo
+                Tap to upload reviewer&apos;s photo
               </Text>
             </View>
 
             {/* Reviewer Name Input */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Reviewer's Name</Text>
+              <Text style={styles.inputLabel}>Reviewer&apos;s Name</Text>
               <View style={styles.inputWrapper}>
                 <View style={{ marginRight: 8 }}>
                   <Feather name="user" size={20} color="#6b7280" />
@@ -354,28 +355,32 @@ const handleDeleteTestimonial = (testimonialId: string) => {
             ) : existingTestimonials.length === 0 ? (
               <Text style={styles.emptyText}>No testimonials found.</Text>
             ) : (
-              existingTestimonials.map((testimonial) => (
-                <View key={testimonial._id} style={styles.card}>
-                  {testimonial.imageUrl && (
-                    <Image
-                      source={{ uri: testimonial.imageUrl }}
-                      style={styles.cardImage}
-                    />
-                  )}
-                  <View style={styles.cardInfo}>
-                    <Text style={styles.cardTitle}>{testimonial.name}</Text>
-                    <Text style={styles.cardText} numberOfLines={3}>
-                      "{testimonial.text}"
-                    </Text>
+              existingTestimonials.map((testimonial, index) => {
+                // Determine a fallback key in case _id is missing
+                const key = testimonial._id || testimonial.id || `testimonial-${index}`;
+                return (
+                  <View key={key} style={styles.card}>
+                    {testimonial.imageUrl && (
+                      <Image
+                        source={{ uri: testimonial.imageUrl }}
+                        style={styles.cardImage}
+                      />
+                    )}
+                    <View style={styles.cardInfo}>
+                      <Text style={styles.cardTitle}>{testimonial.name}</Text>
+                      <Text style={styles.cardText} numberOfLines={3}>
+                        &quot;{testimonial.text}&quot;
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => handleDeleteTestimonial(testimonial._id || testimonial.id || "")}
+                    >
+                      <Feather name="trash-2" size={24} color="#EF4444" />
+                    </TouchableOpacity>
                   </View>
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => handleDeleteTestimonial(testimonial._id)}
-                  >
-                    <Feather name="trash-2" size={24} color="#EF4444" />
-                  </TouchableOpacity>
-                </View>
-              ))
+                );
+              })
             )}
           </View>
 
@@ -524,4 +529,3 @@ const styles = StyleSheet.create({
   },
 });
 export default AdminTestimonials;
-    

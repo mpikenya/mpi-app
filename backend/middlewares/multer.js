@@ -3,14 +3,21 @@ const multer = require("multer");
 // Use memory storage so files don’t get saved locally
 const storage = multer.memoryStorage();
 
-// Optional: Add file filter for images only
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|gif/;
-  const ext = file.mimetype.split("/")[1];
-  if (allowedTypes.test(ext)) {
+  console.log("UPLOAD MIME:", file.mimetype);
+
+  const allowedTypes = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/gif",
+    "image/webp"
+  ];
+
+  if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Only images are allowed"));
+    cb(new Error(`Only images are allowed. Got: ${file.mimetype}`));
   }
 };
 

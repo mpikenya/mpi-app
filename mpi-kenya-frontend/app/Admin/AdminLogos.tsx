@@ -27,6 +27,7 @@ interface ErrorResponse {
 // Interface for Partner Logo Items from the database
 interface PartnerLogoItem {
   _id: string;
+  id?: string; // Fallback identifier in case backend uses 'id'
   name: string;
   description?: string;
   imageUrl: string; // Assuming your backend returns imageUrl
@@ -337,33 +338,37 @@ const AdminLogos = () => {
           ) : existingLogos.length === 0 ? (
             <Text style={styles.emptyText}>No partner logos found.</Text>
           ) : (
-            existingLogos.map((logo) => (
-              <View key={logo._id} style={styles.card}>
-                {logo.imageUrl && (
-                  <Image
-                    source={{ uri: logo.imageUrl }}
-                    style={styles.cardImage}
-                    resizeMode="contain"
-                  />
-                )}
-                <View style={styles.cardInfo}>
-                  <Text style={styles.cardTitle} numberOfLines={1}>
-                    {logo.name}
-                  </Text>
-                  {logo.description && (
-                    <Text style={styles.cardDescription} numberOfLines={2}>
-                      {logo.description}
-                    </Text>
+            existingLogos.map((logo, index) => {
+              // Resolve key identifier to prevent runtime key warnings
+              const logoKey = logo._id || logo.id || `logo-${index}`;
+              return (
+                <View key={logoKey} style={styles.card}>
+                  {logo.imageUrl && (
+                    <Image
+                      source={{ uri: logo.imageUrl }}
+                      style={styles.cardImage}
+                      resizeMode="contain"
+                    />
                   )}
+                  <View style={styles.cardInfo}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>
+                      {logo.name}
+                    </Text>
+                    {logo.description && (
+                      <Text style={styles.cardDescription} numberOfLines={2}>
+                        {logo.description}
+                      </Text>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteLogo(logo._id || logo.id || "")}
+                  >
+                    <Feather name="trash-2" size={24} color="#EF4444" />
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => handleDeleteLogo(logo._id)}
-                >
-                  <Feather name="trash-2" size={24} color="#EF4444" />
-                </TouchableOpacity>
-              </View>
-            ))
+              );
+            })
           )}
         </View>
         <View style={styles.bottomPadding} />
